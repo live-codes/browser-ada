@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ada in the browser — HAC + GNAT-LLVM → WebAssembly</title>
+  <style>
+    :root {
+      --bg: #0f1117; --panel: #171a23; --border: #2a2f3a; --fg: #e6e9ef;
+      --muted: #98a2b3; --accent: #4f8cff; --ok: #3fb950; --err: #ff6b6b;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--fg);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+    header {
+      padding: 18px 22px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+    }
+    header h1 { font-size: 18px; margin: 0; }
+    header .sub { color: var(--muted); font-size: 13px; }
+    main { display: grid; grid-template-columns: 1fr 1fr; gap: 0; height: calc(100vh - 62px); }
+    @media (max-width: 860px) { main { grid-template-columns: 1fr; height: auto; } }
+    section { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border); }
+    section:last-child { border-right: none; }
+    .bar {
+      display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+      border-bottom: 1px solid var(--border); background: var(--panel);
+    }
+    .bar h2 { font-size: 13px; margin: 0; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    .bar .spacer { flex: 1; }
+    button {
+      background: var(--accent); color: #fff; border: 0; border-radius: 7px;
+      padding: 8px 16px; font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    button:disabled { opacity: .5; cursor: default; }
+    textarea {
+      flex: 1; resize: none; border: 0; outline: none; padding: 14px;
+      background: var(--bg); color: var(--fg); font-family: var(--mono);
+      font-size: 13.5px; line-height: 1.5; tab-size: 2;
+    }
+    .output { flex: 1; overflow: auto; padding: 14px; font-family: var(--mono); font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; }
+    .output .err { color: var(--err); }
+    .output .hint { color: var(--muted); }
+    .status { padding: 6px 14px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); background: var(--panel); }
+    .status.ok { color: var(--ok); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Ada in the browser</h1>
+    <span class="sub">HAC (Ada compiler in Ada) compiled to WebAssembly with GNAT-LLVM · no server</span>
+  </header>
+
+  <main>
+    <section>
+      <div class="bar">
+        <h2>Ada source</h2>
+        <div class="spacer"></div>
+        <button id="run" disabled>Run (Ctrl+Enter)</button>
+      </div>
+      <textarea id="src" spellcheck="false">
+with HAT;
+
+procedure Demo is
+  function Fib (N : Natural) return Natural is
+  begin
+    if N < 2 then
+      return N;
+    else
+      return Fib (N - 1) + Fib (N - 2);
+    end if;
+  end Fib;
+begin
+  HAT.Put_Line ("Hello from Ada, compiled and run in your browser!");
+  for I in 0 .. 10 loop
+    HAT.Put ("Fib (");
+    HAT.Put (I);
+    HAT.Put (") = ");
+    HAT.Put_Line (Fib (I));
+  end loop;
+end Demo;
+</textarea>
+    </section>
+
+    <section>
+      <div class="bar"><h2>Output</h2></div>
+      <div class="output" id="output"><span class="hint">Initialising HAC (WebAssembly)…</span></div>
+      <div class="status" id="status">Loading…</div>
+    </section>
+  </main>
+
+  <!-- Self-contained build: the wasm binary is embedded (base64) in this script. -->
+  <script src="hac-standalone.js"></script>
+  <script>
+    const outputEl = document.getElementById('output');
+    const statusEl = document.getElementById('status');
+    const runBtn = document.getElementById('run');
+    const srcEl = document.getElementById('src');
+
+    let hac = null;
+
+    function clearOutput() { outputEl.textContent = ''; }
+    function line(text, cls) {
+      const span = document.createElement('span');
+      if (cls) span.className = cls;
+      span.textContent = text + '\n';
+      outputEl.appendChild(span);
+      outputEl.scrollTop = outputEl.scrollHeight;
+    }
+
+    function mainName(source) {
+      const m = source.match(/\bprocedure\s+([A-Za-z]\w*)/i);
+      return m ? m[1] : 'main';
+    }
+
+    async function init() {
+      hac = await createHacModule({
+        print: (s) => line(s),
+        printErr: (s) => line(s, 'err'),
+      });
+      // Elaborate HAC itself.
+      hac._main();
+      clearOutput();
+      line('Ready. Edit the Ada program and press Run.', 'hint');
+      statusEl.textContent = 'HAC ready (WebAssembly)';
+      statusEl.className = 'status ok';
+      runBtn.disabled = false;
+    }
+
+    function run() {
+      clearOutput();
+      const source = srcEl.value;
+      const name = mainName(source);
+      try {
+        hac.FS.writeFile('/' + name + '.adb', source);
+        hac.ccall('hac_run', null, ['string'], [name + '.adb']);
+        statusEl.textContent = 'Ran ' + name + '.adb';
+        statusEl.className = 'status ok';
+      } catch (e) {
+        line(String(e && e.message ? e.message : e), 'err');
+        statusEl.textContent = 'Error';
+        statusEl.className = 'status';
+      }
+    }
+
+    runBtn.addEventListener('click', run);
+    srcEl.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); run(); }
+    });
+
+    init().catch((e) => {
+      line('Failed to initialise: ' + e, 'err');
+      statusEl.textContent = 'Initialisation failed';
+    });
+  </script>
+</body>
+</html>
