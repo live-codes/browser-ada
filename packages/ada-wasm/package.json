@@ -1,6 +1,6 @@
 {
   "name": "@live-codes/ada-wasm",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Run Ada in the browser via WebAssembly (HAC compiler + p-code VM). No server.",
   "keywords": [
     "ada",

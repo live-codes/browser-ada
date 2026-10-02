@@ -195,6 +195,11 @@ var AdaWasm = (function () {
       var t0 = now();
       var exitCode;
       try {
+        // Emscripten's libc keeps the stdin end-of-file flag across runs, which
+        // would make a repeated run read EOF immediately. Clear it first.
+        if (typeof Module._ada_reset_stdin === 'function') {
+          Module._ada_reset_stdin();
+        }
         exitCode = Module.ccall("hac_run", "number", ["string"], [main]);
       } finally {
         current = null;

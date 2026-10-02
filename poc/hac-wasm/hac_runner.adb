@@ -9,6 +9,7 @@
 with HAC_Sys.Builder,
      HAC_Sys.PCode.Interpreter;
 
+with Ada.Exceptions;
 with Ada.Text_IO;
 with Interfaces;
 with Interfaces.C;
@@ -37,7 +38,19 @@ package body HAC_Runner is
          return 1;
       end if;
 
-      Interpret_on_Current_IO (BD, 1, "", post_mortem);
+      begin
+         Interpret_on_Current_IO (BD, 1, "", post_mortem);
+      exception
+         when E : others =>
+            --  An exception in the runtime (e.g. End_Error on stdin) must not
+            --  escape as a WebAssembly exception; report it and fail.
+            Ada.Text_IO.Put_Line
+              (Ada.Text_IO.Standard_Error,
+               "Ada error: " & Ada.Exceptions.Exception_Name (E));
+            Ada.Text_IO.Put_Line
+              (Ada.Text_IO.Standard_Error, Ada.Exceptions.Exception_Message (E));
+            return 1;
+      end;
 
       if Is_Exception_Raised (post_mortem.Unhandled) then
          Ada.Text_IO.Put_Line

@@ -394,6 +394,18 @@ resets it to 0 at the start of every `hac_run` so repeated runs in one instance
 do not inherit a previous program's status. The wrapper reads it back via an
 `Import` of the `gnat_exit_status` object to report `exitCode`.
 
+**G12 — Emscripten's stdin keeps its end-of-file flag across runs.**
+When a run reads standard input up to EOF (e.g. `HAT.Get` on input with no
+trailing newline), libc sets the EOF indicator on the `stdin` FILE. That flag
+is not cleared between `hac_run` calls, so every subsequent run sees EOF
+immediately and GNAT's `Ada.Text_IO` raises `End_Error`, which escaped as a
+`WebAssembly.Exception` (`[object WebAssembly.Exception]` in the console). Fix:
+`poc/hac-wasm/ada_reset.c` exports `ada_reset_stdin()` (a `clearerr(stdin)`),
+linked into the runtime and called from the package before each `hac_run`. The
+Ada wrapper also catches stray exceptions and reports them (e.g.
+`ADA.IO_EXCEPTIONS.END_ERROR`) instead of letting them escape as wasm
+exceptions.
+
 ---
 
 ## 8. Runtime capabilities (`rts-wasm-emcc-eh`)

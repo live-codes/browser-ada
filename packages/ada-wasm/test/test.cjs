@@ -57,6 +57,25 @@ const AdaWasm = require('../dist/ada-wasm.iife.js');
   r = await AdaWasm.run('with HAT; use HAT;\nprocedure Solo is begin Put_Line ("solo"); end Solo;');
   assert.strictEqual(r.stdout, 'solo\n');
 
+  // 8. repeated runs that read stdin (regression: libc keeps the stdin EOF flag
+  // across runs, which made every run after the first fail with End_Error)
+  const stdinProgram =
+    'with HAT; use HAT;\nprocedure Twice is N : Integer; begin Get (N); Put_Line (N * 2); end Twice;';
+  r = await AdaWasm.run(stdinProgram, '21');
+  assert.strictEqual(r.stdout.trim(), '42');
+  assert.strictEqual(r.exitCode, 0);
+  r = await AdaWasm.run(stdinProgram, '5');
+  assert.strictEqual(r.stdout.trim(), '10');
+  assert.strictEqual(r.exitCode, 0);
+
+  // 9. an unhandled runtime exception is reported, not thrown as a wasm exception
+  r = await AdaWasm.run(
+    'with HAT; use HAT;\nprocedure NoInput is N : Integer; begin Get (N); end NoInput;',
+    '',
+  );
+  assert.strictEqual(r.exitCode, 1);
+  assert.match(r.stderr, /END_ERROR/);
+
   console.log('all ada-wasm tests passed');
 })().catch((e) => {
   console.error(e);

@@ -27,13 +27,16 @@ chmod +x "$BIN/llvm-gcc-16"
 SRC=/mnt/d/DevWork/live-codes/browser-ada/poc/hac-wasm
 DEST=/root/hacwasm
 rm -rf "$DEST" && mkdir -p "$DEST"
-cp "$SRC"/main.adb "$SRC"/hac_runner.ads "$SRC"/hac_runner.adb "$SRC"/hac_wasm.gpr "$DEST"/
+cp "$SRC"/main.adb "$SRC"/hac_runner.ads "$SRC"/hac_runner.adb "$SRC"/hac_wasm.gpr "$SRC"/ada_reset.c "$DEST"/
 cp /mnt/d/DevWork/live-codes/browser-ada/poc/eh-smoke/unwind_callpersonality.c "$DEST"/
 cp /mnt/d/DevWork/live-codes/browser-ada/poc/eh-smoke/ada_runtime_support.js "$DEST"/
 cd "$DEST"
 
 echo "=== compile unwind_callpersonality.c ==="
 "$EMCC" -c -O2 -fwasm-exceptions unwind_callpersonality.c -o unwind_callpersonality.o
+
+echo "=== compile ada_reset.c ==="
+"$EMCC" -c -O2 ada_reset.c -o ada_reset.o
 
 echo "=== gprbuild HAC (compile + bind) ==="
 gprbuild --target=llvm --RTS="$RTS" -c -b -p -P hac_wasm.gpr 2>&1 | tail -60
@@ -47,9 +50,9 @@ echo "=== link with emcc ==="
   -sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORT_NAME=createHacModule \
   -sINVOKE_RUN=0 -sEXIT_RUNTIME=0 -sERROR_ON_UNDEFINED_SYMBOLS=0 \
   -sFORCE_FILESYSTEM=1 -sEXPORTED_RUNTIME_METHODS=FS,ccall \
-  -sEXPORTED_FUNCTIONS=_main,_hac_run \
+  -sEXPORTED_FUNCTIONS=_main,_hac_run,_ada_reset_stdin \
   --js-library ada_runtime_support.js \
-  unwind_callpersonality.o .objs/*.o \
+  unwind_callpersonality.o ada_reset.o .objs/*.o \
   "$RTS/adalib/libgnat.a" \
   -o hac.js 2>&1 | tail -30
 echo "EMCC_EXIT=${PIPESTATUS[0]}"
@@ -62,9 +65,9 @@ echo "=== link standalone (single-file, classic script, for file:// use) ==="
   -sMODULARIZE=1 -sEXPORT_NAME=createHacModule -sSINGLE_FILE=1 \
   -sINVOKE_RUN=0 -sEXIT_RUNTIME=0 -sERROR_ON_UNDEFINED_SYMBOLS=0 \
   -sFORCE_FILESYSTEM=1 -sEXPORTED_RUNTIME_METHODS=FS,ccall \
-  -sEXPORTED_FUNCTIONS=_main,_hac_run \
+  -sEXPORTED_FUNCTIONS=_main,_hac_run,_ada_reset_stdin \
   --js-library ada_runtime_support.js \
-  unwind_callpersonality.o .objs/*.o \
+  unwind_callpersonality.o ada_reset.o .objs/*.o \
   "$RTS/adalib/libgnat.a" \
   -o hac-standalone.js 2>&1 | tail -5
 echo "STANDALONE_EXIT=${PIPESTATUS[0]}"
