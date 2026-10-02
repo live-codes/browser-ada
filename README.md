@@ -21,6 +21,7 @@ upgrade instructions, see **[FINDINGS.md](FINDINGS.md)**.
 | `poc/hac-wasm/hac-standalone.js` | Single-file build: classic script with the wasm embedded as base64 |
 | `poc/hac-wasm/hac.js` + `hac.wasm` | ES-module build (serve over HTTP) |
 | `poc/hac-wasm/hac_runner.ads/.adb` | Ada wrapper exporting `hac_run` |
+| `packages/ada-wasm/` | npm package (`@live-codes/ada-wasm`) — single IIFE bundle |
 | `poc/eh-smoke/` | Exception-propagation validation harness |
 | `poc/scripts/` | Toolchain + build scripts |
 | `FINDINGS.md` | Technical reference and build process |
@@ -44,6 +45,38 @@ end Demo;
 
 > If you prefer to serve it (or use the ES-module build), run any static server
 > from `poc/hac-wasm/`, e.g. `python -m http.server`, and open `index.html`.
+
+---
+
+## npm package
+
+`packages/ada-wasm/` packages the runtime as a **single IIFE bundle** for
+LiveCodes (or any page/worker). It exposes a global `AdaWasm` and accepts a
+source string or an array of files, an optional stdin, and returns
+stdout/stderr/exit code:
+
+```js
+const { stdout, stderr, exitCode } = await AdaWasm.run(`
+  with HAT; use HAT;
+  procedure Hello is begin Put_Line ("hi"); end Hello;
+`, /* stdin */ '');
+```
+
+Multi-file and stdin:
+
+```js
+await AdaWasm.run(
+  [
+    { filename: 'main.adb',   content: 'with Helper; procedure Main is begin Helper.Greeting; end Main;' },
+    { filename: 'helper.ads', content: 'package Helper is procedure Greeting; end Helper;' },
+    { filename: 'helper.adb', content: 'with HAT; use HAT; package body Helper is procedure Greeting is begin Put_Line ("multi"); end Greeting; end Helper;' },
+  ],
+  { input: '' },
+);
+```
+
+Build and test it with `npm run build` / `npm test` in `packages/ada-wasm/`.
+Full API: [packages/ada-wasm/README.md](packages/ada-wasm/README.md).
 
 ---
 
@@ -179,17 +212,23 @@ node poc/eh-smoke/test.mjs            # exception propagation
 
 ---
 
-## Licenses
+## License
 
-This repository's own code is provided as a proof of concept. The built
-artifacts bundle third-party components:
+**MIT © 2026 Hatem Hosny** — see [LICENSE](LICENSE).
+
+The built artifacts bundle third-party components whose licenses are compatible
+with MIT. The GNAT/AdaWebPack WebAssembly runtime is GPL-3.0-or-later **with
+the GCC Runtime Library Exception**, which permits conveying a program that
+links the runtime under terms of your choice, provided the runtime's
+corresponding source is made available.
 
 - **HAC** — MIT.
-- **GNAT-LLVM**, **GCC 16**, **bb-runtimes**, **AdaWebPack runtime** —
-  GPL-3.0-or-later **with the GCC Runtime Library Exception** (the exception
-  permits distributing compiled programs without imposing the GPL).
+- **GNAT runtime / GNAT-LLVM / GCC 16 / bb-runtimes / AdaWebPack runtime** —
+  GPL-3.0-or-later with the GCC Runtime Library Exception.
 - **AdaWebPack Web API bindings** — BSD-3-Clause.
 - **LLVM/Clang**, `unwind_callpersonality.c` — Apache-2.0 WITH LLVM-exception.
 - **Emscripten** — MIT / University of Illinois NCSA.
 
-See [FINDINGS.md](FINDINGS.md) §4 for the full table with links and versions.
+See [FINDINGS.md](FINDINGS.md) §4 for the full table with links and versions,
+and [`packages/ada-wasm/NOTICE`](packages/ada-wasm/NOTICE) for the npm
+package's attributions.

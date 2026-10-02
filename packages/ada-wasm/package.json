@@ -1,0 +1,34 @@
+{
+  "name": "@live-codes/ada-wasm",
+  "version": "0.1.0",
+  "description": "Run Ada in the browser via WebAssembly (HAC compiler + p-code VM). No server.",
+  "keywords": [
+    "ada",
+    "hac",
+    "wasm",
+    "webassembly",
+    "compiler",
+    "playground",
+    "livecodes"
+  ],
+  "license": "MIT",
+  "author": "Hatem Hosny",
+  "main": "dist/ada-wasm.iife.js",
+  "unpkg": "dist/ada-wasm.iife.js",
+  "jsdelivr": "dist/ada-wasm.iife.js",
+  "types": "dist/index.d.ts",
+  "sideEffects": true,
+  "files": [
+    "dist",
+    "NOTICE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node test/test.cjs && node test/require-package.cjs",
+    "prepack": "npm run build"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

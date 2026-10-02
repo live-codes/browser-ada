@@ -308,6 +308,26 @@ Builds `poc/eh-smoke` (an Ada module that raises inside a nested subprogram and
 catches in the caller) against the same runtime and runs it in Node. Expected:
 `ada_try_raise(1) = 2`.
 
+### 6.11 Bundle the npm package — `packages/ada-wasm`
+
+```bash
+cd packages/ada-wasm
+npm run build     # dist/ada-wasm.iife.js + dist/index.d.ts
+npm test          # Node end-to-end tests
+```
+
+`scripts/build.mjs` wraps `poc/hac-wasm/hac-standalone.js` (the single-file
+runtime) together with `src/index.js` into one IIFE and exposes `AdaWasm` as a
+global and as `module.exports`. The runtime's CommonJS branch is neutralised by
+shadowing `module`/`exports`/`define` in the wrapper function, so the bundle
+works as a classic script, a worker script, and a CommonJS module. The package
+adds the `run(codeOrFiles, options)` API (stdin, multiple files, exit code) on
+top of the raw `hac_run` export. The bundle is self-contained: the wasm is
+embedded as base64, so no assets are hosted.
+
+> Rebuild the runtime first (`build-hac.sh`) whenever the Ada wrapper or HAC
+> changes, then rebuild the package bundle.
+
 ---
 
 ## 7. Gotchas and troubleshooting
@@ -366,6 +386,13 @@ Add `-sFORCE_FILESYSTEM=1 -sEXPORTED_RUNTIME_METHODS=FS,ccall`.
 **G10 — HAC output spacing.**
 HAC's default `Integer_IO` width right-justifies integers (e.g.
 `I squared =                   25`). This is HAC behaviour, not a bug.
+
+**G11 — `gnat_exit_status` is a process global.**
+`HAT.Set_Exit_Status` sets the runtime's `gnat_exit_status` variable
+(`exit.c`), which persists for the life of the wasm instance. The wrapper
+resets it to 0 at the start of every `hac_run` so repeated runs in one instance
+do not inherit a previous program's status. The wrapper reads it back via an
+`Import` of the `gnat_exit_status` object to report `exitCode`.
 
 ---
 
@@ -455,6 +482,16 @@ Expected outputs are recorded in §1 and §6.10.
 browser-ada/
   FINDINGS.md                     # this file
   README.md                       # usage of the built module / page
+  packages/
+    ada-wasm/                     # npm package @live-codes/ada-wasm (single IIFE)
+      src/index.js                # runtime wrapper (createRuntime/run)
+      src/index.d.ts              # types
+      scripts/build.mjs           # concatenates runtime + wrapper -> dist
+      dist/ada-wasm.iife.js       # built bundle (wasm embedded as base64)
+      test/                       # Node end-to-end tests
+      LICENSE                     # MIT, Copyright (c) 2026 Hatem Hosny
+      NOTICE                      # bundled third-party licenses
+      README.md
   poc/
     hac-wasm/                     # THE POC
       index.html                  # self-contained page (uses hac-standalone.js)

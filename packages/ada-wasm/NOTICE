@@ -1,0 +1,45 @@
+@live-codes/ada-wasm
+Copyright (c) 2026 Hatem Hosny
+License: MIT (see LICENSE)
+
+This package bundles the following third-party components. Their licenses are
+compatible with the MIT license of this package; the GPL-licensed runtime is
+conveyed under the GCC Runtime Library Exception, which permits distributing a
+program that links the runtime under terms of your choice, provided the
+runtime's corresponding source is made available (links below).
+
+-------------------------------------------------------------------------------
+HAC — HAC Ada Compiler
+  Copyright (c) 2013-2026 Gautier de Montmollin and contributors
+  License: MIT
+  https://github.com/zertovitch/hac
+-------------------------------------------------------------------------------
+GNAT runtime library (libgnat), GNAT-LLVM, GCC 16 front end, bb-runtimes,
+and the AdaWebPack WebAssembly runtime overrides
+  Copyright (c) Free Software Foundation, Inc., AdaCore and contributors
+  License: GPL-3.0-or-later WITH the GCC Runtime Library Exception
+  Sources:
+    https://github.com/ovenpasta/gnat-llvm
+    https://github.com/ovenpasta/adawebpack
+    https://github.com/ovenpasta/bb-runtimes
+    https://gcc.gnu.org/git/gcc.git
+  The GCC Runtime Library Exception text:
+    https://www.gnu.org/licenses/gcc-exception-3.1.html
+-------------------------------------------------------------------------------
+AdaWebPack Web API bindings
+  Copyright (c) 2020-2022 Vadim Godunko and contributors
+  License: BSD-3-Clause
+  https://github.com/godunko/adawebpack
+-------------------------------------------------------------------------------
+LLVM / Clang (wasm backend and linker, build-time)
+  License: Apache-2.0 WITH LLVM-exception
+  https://llvm.org
+-------------------------------------------------------------------------------
+Emscripten (linker and JS runtime glue)
+  License: MIT / University of Illinois/NCSA Open Source License
+  https://emscripten.org
+-------------------------------------------------------------------------------
+_Unwind_CallPersonality shim (src/ of the runtime)
+  Adapted from LLVM libunwind / AdaWebPack wasm_eh_unwind.c
+  License: Apache-2.0 WITH LLVM-exception
+-------------------------------------------------------------------------------
